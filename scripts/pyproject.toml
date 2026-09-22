@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "beta-indicator-scripts"
+version = "7.0.0"
+description = "ai-beta CLI: unified query command line for ai_beta_skill (based on aibeta SDK); installed via uv tool install from this source directory."
+requires-python = ">=3.10"
+dependencies = [
+    "aibeta==1.1.0",
+    "matplotlib>=3.8",
+]
+
+[project.scripts]
+ai-beta = "beta_indicator.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/beta_indicator"]
