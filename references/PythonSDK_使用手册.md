@@ -56,7 +56,7 @@ aibeta.beta_indicator.list_indicator_types()
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "aibeta==1.1.0",
+#     "aibeta==1.3.1",
 # ]
 # ///
 import aibeta
@@ -283,7 +283,7 @@ uv run your_script.py
 **`list_sector_types`**
 
 - **调用方式**：`beta_indicator.list_sector_types()`
-- **功能简介**：读取所有板块类型（如 ETF 指数、中信证券行业等）
+- **功能简介**：读取所有板块类型，共 6 类：ETF 指数、中信证券行业（聚合口径）及其一/二/三级细分行业、主题概念；中信家族按"聚合 → 一级 → 二级 → 三级"排序
 - **参数**：无
 
 > **注意（衍生接口的 `update_time` 语义）**：`list_indicators_by_sector_type` / `list_indicators_by_sector` 等衍生接口基于 SDK 本地全量缓存快照实现，其返回的 `update_time` 是**本地缓存重建时间**，并非后端数据更新时间；与原子接口（如 `list_indicators`、`get_indicator_value`）返回的后端 `update_time` 含义不同，请勿混用。本 skill 的 CLI 已对缓存类命令统一剔除该列。
@@ -294,6 +294,9 @@ uv run your_script.py
 | ------------ |
 | ETF指数      |
 | 中信证券行业 |
+| 中信证券一级行业 |
+| 中信证券二级行业 |
+| 中信证券三级行业 |
 | 主题概念     |
 
 ---
@@ -302,7 +305,7 @@ uv run your_script.py
 
 - **调用方式**：`beta_indicator.list_sectors(sector_type=None)`
 - **功能简介**：读取板块列表，可选按板块类型过滤
-- **参数**：`sector_type: str | None`，传 `None` 返回全部
+- **参数**：`sector_type: str | None`，传 `None` 返回全部。取值仅为以下 6 个字符串之一：`ETF指数`、`中信证券行业`（聚合口径，覆盖一/二/三级全部行业）、`中信证券一级行业`、`中信证券二级行业`、`中信证券三级行业`、`主题概念`；传入细分类型时仅返回对应层级的板块
 
 **返回样例**（`sector_type="ETF指数"`）：
 
@@ -318,16 +321,18 @@ uv run your_script.py
 
 - **调用方式**：`beta_indicator.list_indicators_by_sector_type(sector_type)`
 - **功能简介**：按板块类型读取该板块类型的全部指标列表
-- **参数**：`sector_type: str`，板块类型名称（如 `中信证券行业`）
+- **参数**：`sector_type: str`，板块类型名称，取值仅为以下 6 个字符串之一：`ETF指数`、`中信证券行业`（聚合口径，覆盖一/二/三级全部行业）、`中信证券一级行业`、`中信证券二级行业`、`中信证券三级行业`、`主题概念`
 - **规模提示**：返回该板块类型下"指标×板块"的展开结果（数万~十万行级，如中信证券行业约 3 万行），建议落盘后按 `sector_code` / `indicator_type` 过滤处理；查询单个板块的指标请改用 `list_indicators_by_sector`
 
 **返回样例**（`sector_type="中信证券行业"`）：
 
 | indicator_type                             | sector_type  | sector_code | sector_name | indicator_id   | indicator_unit | indicator_frequency | update_time         |
 | ------------------------------------------ | ------------ | ----------- | ----------- | -------------- | -------------- | ------------------- | ------------------- |
-| 主题基础池净利润下一年增速一致预测双周变化 | 中信证券行业 | 10          | 石油石化    | `4294331d…` | %              | 周                  | 2026-08-31 09:33:02 |
-| 主题基础池净利润下一年增速一致预测双周变化 | 中信证券行业 | 1010        | 石油开采Ⅱ  | `6aeecb1c…` | %              | 周                  | 2026-08-31 09:33:02 |
-| 主题基础池净利润下一年增速一致预测双周变化 | 中信证券行业 | 101010      | 石油开采Ⅲ  | `a628e746…` | %              | 周                  | 2026-08-31 09:33:02 |
+| 主题基础池净利润下一年增速一致预测双周变化 | 中信证券一级行业 | 10     | 石油石化    | `4294331d…` | %              | 周                  | 2026-08-31 09:33:02 |
+| 主题基础池净利润下一年增速一致预测双周变化 | 中信证券二级行业 | 1010   | 石油开采Ⅱ  | `6aeecb1c…` | %              | 周                  | 2026-08-31 09:33:02 |
+| 主题基础池净利润下一年增速一致预测双周变化 | 中信证券三级行业 | 101010 | 石油开采Ⅲ  | `a628e746…` | %              | 周                  | 2026-08-31 09:33:02 |
+
+> 返回行的 `sector_type` 列为对应层级的行业名（按行业代码位数：一级 2 位、二级 4 位、三级 6 位），并非查询词"中信证券行业"本身。
 
 ---
 
@@ -344,6 +349,8 @@ uv run your_script.py
 | 主题基础池净利润下一年增速一致预测双周变化 | ETF指数     | 000001.SH   | 上证综合指数 | `831a95f5…be227f` | %              | 周                  | 2026-08-19 10:26:12 |
 | 主题基础池净利润下一年增速一致预测         | ETF指数     | 000001.SH   | 上证综合指数 | `45168a2f…adbe83` | %              | 周                  | 2026-08-19 10:26:12 |
 | 主题基础池下一年一致预测双周变化综合打分   | ETF指数     | 000001.SH   | 上证综合指数 | `f05d2290…4aefee` | %              | 周                  | 2026-08-19 10:26:12 |
+
+> 中信行业板块的 `sector_type` 列为对应层级名（中信证券一/二/三级行业）。
 
 ---
 
@@ -378,7 +385,7 @@ uv run your_script.py
 
 - **调用方式**：`beta_indicator.get_indicator_value_by_type_and_sector(indicator_type, sector_type)`
 - **功能简介**：根据指标类型和板块类型，读取所有板块的历史指标值
-- **参数**：`indicator_type: str`，指标类型名称；`sector_type: str`，板块类型名称（如 `ETF指数`）
+- **参数**：`indicator_type: str`，指标类型名称；`sector_type: str`，板块类型名称，取值仅为以下 6 个字符串之一：`ETF指数`、`中信证券行业`（聚合口径，等价三级细分并集）、`中信证券一级行业`、`中信证券二级行业`、`中信证券三级行业`、`主题概念`
 - **规模提示**：返回所有板块的全量历史（数万行级以上），建议落盘后按 `indicator_related_sector_code` / 日期窗口过滤处理；仅需最新一期截面请改用 `get_indicator_value_latest_by_type_and_sector`，仅需单指标时序请改用 `get_indicator_value`
 
 **返回样例**：
@@ -395,7 +402,7 @@ uv run your_script.py
 
 - **调用方式**：`beta_indicator.get_indicator_value_latest_by_type_and_sector(indicator_type, sector_type)`
 - **功能简介**：根据指标类型和板块类型，读取所有板块的最新一期指标值
-- **参数**：`indicator_type: str`，指标类型名称；`sector_type: str`，板块类型名称（如 `ETF指数`）
+- **参数**：`indicator_type: str`，指标类型名称；`sector_type: str`，板块类型名称，取值仅为以下 6 个字符串之一：`ETF指数`、`中信证券行业`（聚合口径，等价三级细分并集）、`中信证券一级行业`、`中信证券二级行业`、`中信证券三级行业`、`主题概念`
 
 **返回样例**：
 
@@ -439,7 +446,28 @@ uv run your_script.py
 
 > 排序说明同市场日报：返回记录按 `view_date` 降序排列（最新一期在最前）。
 
-> 说明：SDK 中还存在内部接口 `get_information_ai_extract_ticker_notes_flow`（ETF 信息文本），本手册**暂不收录**：其 `notes_type` 合法取值未公开，传入任意取值都会静默返回空结果且无法排障。请勿在生产脚本中使用该接口；待数据方补充取值枚举与确认返回结构后，再补充使用文档。
+---
+
+**`get_information_ai_extract_ticker_notes_flow`**
+
+- **调用方式**：`text_analysis.get_information_ai_extract_ticker_notes_flow(start_date, end_date, notes_type)`
+- **功能简介**：根据时间范围和信息类型，读取标的（ETF/指数）周度投资分析文本
+- **参数**：`start_date: str`，开始日期；`end_date: str`，结束日期；`notes_type: str`，信息类型，当前合法取值仅为 `"周度投资分析报告"`，传入其他取值会**静默返回空 DataFrame**（0 行 0 列、无报错），排障时请先核对该取值
+- **规模提示**：返回"日期 × 标的"展开的全量文本（单条 `notes_content` 为完整 Markdown 报告），建议落盘后按 `ticker_code` / `notes_date` 过滤处理
+
+**返回样例**（`notes_type="周度投资分析报告"`，`start_date="2026-01-01"`，`end_date="2026-12-31"`）：
+
+| notes_type          | notes_date | ticker_code | ticker_name               | notes_content                                                                    | notes_impact_dimension |
+| ------------------- | ---------- | ----------- | ------------------------- | -------------------------------------------------------------------------------- | ---------------------- |
+| 周度投资分析报告    | 2026-01-04 | 000813.CSI  | 中证细分化工产业主题指数  | "\n# 周度投资分析报告\n\n> #### 报告日期: 2026-01-04\n> #### 标的名称: 中证细分化工产业主题指数…" | None                   |
+| 周度投资分析报告    | 2026-01-04 | 000819.SH   | 中证申万有色金属指数      | "\n# 周度投资分析报告\n\n> #### 报告日期: 2026-01-04\n> #### 标的名称: 中证申万有色金属指数…" | None                   |
+| 周度投资分析报告    | 2026-01-04 | 399808.SZ   | 中证新能源指数            | "\n# 周度投资分析报告\n\n> #### 报告日期: 2026-01-04\n> #### 标的名称: 中证新能源指数…" | None                   |
+
+> `notes_content` 为完整的 Markdown 文本（此处截断展示），正文含"本周投资结论、配置建议"等章节；每行代表一条"日期 × 标的"的文本记录。当前窗口内 `notes_impact_dimension` 列全为 `None`（预留字段）。
+>
+> **排序说明**：与市场日报/策略周报相反，返回记录按 `notes_date` **升序**排列（最早一期在最前）；取最新一期需取返回的最后一行，或自行按 `notes_date` 降序重排。
+>
+> **测试记录**（2026-10-13）：上述区间实测返回 1207 行 × 6 列，覆盖 30 个标的，`notes_date` 实际范围 2026-01-04 ~ 2026-10-11；`notes_type` 传入非法取值实测返回 shape 为 `(0, 0)` 的空 DataFrame。
 
 ## 5、依赖
 

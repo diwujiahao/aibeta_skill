@@ -54,17 +54,6 @@ BAR_TWO_ENDS_KEEP = 15
 MAD_OUTLIER_SCALE = 20.0
 MAD_NORMAL_CONSISTENCY = 1.4826
 
-# 中信证券行业按层级拆分的扩展板块类型：可选全集由 3 个扩展为 6 个
-# （ETF指数 / 中信证券行业 / 中信证券一~三级行业 / 主题概念）。
-# 拆分层级取数仍走父类目"中信证券行业"，再按 sector_code 位数过滤层级
-# （一级 2 位、二级 4 位、三级 6 位，与 SKILL 文档的层级编码约定一致）
-CITIC_SECTOR_LEVELS: dict[str, int] = {
-    "中信证券一级行业": 2,
-    "中信证券二级行业": 4,
-    "中信证券三级行业": 6,
-}
-CITIC_PARENT_SECTOR_TYPE = "中信证券行业"
-
 # plot-series 时间窗口口径说明（两种模式口径不同，与对应查询命令一致）
 PLOT_DATE_WINDOW_NOTE = (
     "指标模式（--indicator-id）按 data_publish_date（发布日）过滤，"
@@ -203,25 +192,6 @@ def _lookup_type_meta(indicator_type: str) -> dict[str, Any] | None:
         "indicator_unit": row.get("indicator_unit"),
         "indicator_frequency": row.get("indicator_frequency"),
     }
-
-
-def _resolve_citic_fetch_type(sector_type: str) -> str:
-    """解析取数用板块类型：中信一/二/三级行业为拆分层级，取数走父类目。
-
-    其余板块类型（含父类目"中信证券行业"）原样返回。
-    """
-    return CITIC_PARENT_SECTOR_TYPE if sector_type in CITIC_SECTOR_LEVELS else sector_type
-
-
-def _filter_sector_by_level(sector_type: str, df: pd.DataFrame) -> pd.DataFrame:
-    """按中信行业层级过滤截面：sector_code 位数对应层级（一级 2 位、二级 4 位、三级 6 位）。
-
-    非拆分层级原样返回，不做过滤。
-    """
-    code_length = CITIC_SECTOR_LEVELS.get(sector_type)
-    if code_length is None:
-        return df
-    return df[df["sector_code"].str.strip().str.len() == code_length]
 
 
 def _build_indicator_title(args: argparse.Namespace) -> tuple[str, str]:
@@ -633,8 +603,9 @@ def run_plot_bar(args: argparse.Namespace) -> dict[str, Any]:
         args.output, args.format, f"bar_{args.indicator_type}", prefix="plot_bar"
     )
 
+    # 细分层级（如中信一/二/三级行业）的转译与层级过滤由 SDK 内部完成
     raw_df = aibeta.beta_indicator.get_indicator_value_latest_by_type_and_sector(
-        args.indicator_type, _resolve_citic_fetch_type(args.sector_type)
+        args.indicator_type, args.sector_type
     )
     if raw_df.empty:
         raise ValueError(
@@ -642,17 +613,8 @@ def run_plot_bar(args: argparse.Namespace) -> dict[str, Any]:
             "未返回任何截面数据（取值可能不存在，或暂无数据）；"
             "可先运行 list-indicator-types / list-sector-types 确认可用取值。"
         )
-    # SDK 原始列含 indicator_related_*（dict/list 字符串），先解析为标准三列；
-    # 中信一/二/三级行业在此按层级过滤（过滤后为空视为该层级无数据）
-    raw_df = _filter_sector_by_level(
-        args.sector_type, normalize_related_sector_columns(raw_df)
-    )
-    if raw_df.empty:
-        raise ValueError(
-            f"指标类型 {args.indicator_type} × 板块类型 {args.sector_type} "
-            "在该行业层级下未返回任何截面数据；"
-            "可先运行 list-indicator-types / list-sector-types 确认可用取值。"
-        )
+    # SDK 原始列含 indicator_related_*（dict/list 字符串），先解析为标准三列
+    raw_df = normalize_related_sector_columns(raw_df)
 
     clean_df = pd.DataFrame(
         {
@@ -799,12 +761,10 @@ def run_plot_scatter(args: argparse.Namespace) -> dict[str, Any]:
             "或确认口径后加 --skip-frequency-check 显式跳过校验。"
         )
 
-    # 中信一/二/三级行业取数走父类目"中信证券行业"，返回前按层级过滤
-    fetch_type = _resolve_citic_fetch_type(args.sector_type)
-
     def _fetch_latest(indicator_type: str) -> pd.DataFrame:
+        # 细分层级（如中信一/二/三级行业）的转译与层级过滤由 SDK 内部完成
         df = aibeta.beta_indicator.get_indicator_value_latest_by_type_and_sector(
-            indicator_type, fetch_type
+            indicator_type, args.sector_type
         )
         if df.empty:
             raise ValueError(
@@ -812,11 +772,8 @@ def run_plot_scatter(args: argparse.Namespace) -> dict[str, Any]:
                 "未返回任何截面数据（取值可能不存在，或暂无数据）；"
                 "可先运行 list-indicator-types / list-sector-types 确认可用取值。"
             )
-        # SDK 原始列含 indicator_related_*（dict/list 字符串），先解析为标准三列；
-        # 中信一/二/三级行业在此按层级过滤（过滤后为空由后续共同板块校验兜底）
-        return _filter_sector_by_level(
-            args.sector_type, normalize_related_sector_columns(df)
-        )
+        # SDK 原始列含 indicator_related_*（dict/list 字符串），先解析为标准三列
+        return normalize_related_sector_columns(df)
 
     x_df = _fetch_latest(x_type)
     y_df = _fetch_latest(y_type)

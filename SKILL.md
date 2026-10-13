@@ -1,8 +1,8 @@
 ---
 name: "ai_beta_skill"
-description: "面向 A 股板块级投研数据的查询与分析技能，数据统一来自 aibeta SDK，提供 CLI 快速查数、图表绘制（plot-series 时序折线图、plot-bar 截面柱状图、plot-scatter 双指标截面散点图，直接输出 PNG/SVG）与 Python SDK 深度分析三种方式。能力覆盖：1) 板块指标库——为 ETF 指数、中信证券行业、主题概念三类板块提供多维指标：宏观敏感度、景气度、财务（净利润TTM、ROE 等）、估值（市盈率PE、市净率PB、市销率PS、股债相对盈利收益率）、市场参与者预期（一致预测）、资金面（融资融券、ETF资金）、技术面（均线、MACD、RSI、涨跌幅、成交量、交易拥挤度/热度），支持单板块指标历史时序查询、多板块横向截面比较、批量时序拉取与图表绘制；2) 主题分类库——主题库框架、主题成分股（标准池）、主题历史指数点位；3) 文本库——市场日报与策略周报 AI 文本检索（查询某日市场热点、最新策略观点）。当用户需要板块/主题层面的指标数值、历史趋势、趋势图表、跨板块对比、截面比较图、指标相关性、主题体系/成分股/主题指数数据或日报周报文本，或要基于这些数据构建分析脚本时调用本技能；不适用于个股级行情与财务数据查询。"
+description: "面向 A 股板块级投研数据的查询与分析技能，数据统一来自 aibeta SDK，提供 CLI 快速查数、图表绘制（plot-series 时序折线图、plot-bar 截面柱状图、plot-scatter 双指标截面散点图，直接输出 PNG/SVG）与 Python SDK 深度分析三种方式。能力覆盖：1) 板块指标库——为 ETF 指数、中信证券行业（聚合及一/二/三级细分行业）、主题概念等六类板块类型提供多维指标：宏观敏感度、景气度、财务（净利润TTM、ROE 等）、估值（市盈率PE、市净率PB、市销率PS、股债相对盈利收益率）、市场参与者预期（一致预测）、资金面（融资融券、ETF资金）、技术面（均线、MACD、RSI、涨跌幅、成交量、交易拥挤度/热度），支持单板块指标历史时序查询、多板块横向截面比较、批量时序拉取与图表绘制；2) 主题分类库——主题库框架、主题成分股（标准池）、主题历史指数点位；3) 文本库——市场日报与策略周报 AI 文本检索（查询某日市场热点、最新策略观点）。当用户需要板块/主题层面的指标数值、历史趋势、趋势图表、跨板块对比、截面比较图、指标相关性、主题体系/成分股/主题指数数据或日报周报文本，或要基于这些数据构建分析脚本时调用本技能；不适用于个股级行情与财务数据查询。"
 metadata:
-  version: "7.0.0"
+  version: "7.1.0"
   author: "伍老师"
 ---
 
@@ -12,7 +12,7 @@ A 股板块级投研数据的查询与分析技能，数据统一来自 aibeta S
 
 ## 功能概览
 
-- **板块指标库**：为三类板块——ETF指数、中信证券行业（一级行业代码 2 位、二级 4 位、三级 6 位）、主题概念——提供多维指标：
+- **板块指标库**：为六类板块类型——ETF指数、中信证券行业（聚合口径，行业代码 2/4/6 位对应一/二/三级）、中信证券一级行业、中信证券二级行业、中信证券三级行业、主题概念——提供多维指标：
   - 宏观敏感度 / 景气度 / 财务（净利润TTM、ROE 等）/ 估值（市盈率PE、市净率PB、市销率PS、股债相对盈利收益率）/ 市场参与者预期（一致预测）/ 资金面（融资融券、ETF资金）/ 技术面（均线、MACD、RSI、涨跌幅、成交量、交易拥挤度/热度）
   - 支持单板块指标历史时序查询、多板块横向截面比较、批量时序拉取与图表绘制
 - **主题分类库**：主题库框架、主题成分股（标准池）、主题历史指数点位
@@ -92,10 +92,10 @@ A 股板块级投研数据的查询与分析技能，数据统一来自 aibeta S
 | `list-indicators` | 按指标类型查指标列表（约 2 千行/类型，建议先过滤） | 【必填】`--indicator-type`；【可选】`--sector-type`、`--keyword` |
 | `get-indicator-value` | 查单个指标的时序数据 | 【必填】`--indicator-id`；【可选】时间窗口 |
 | `get-indicator-value-batch` | 批量时序查询（最多 30 个，固定并发 3） | 【必填】`--indicator-id`（可重复）；【可选】时间窗口 |
-| `list-sector-types` | 查询所有板块类型 | 无 |
-| `list-sectors` | 查板块列表（无过滤约 2.3 千行） | 【可选】`--sector-type`、`--sector-code`、`--sector-name`、`--keyword` |
+| `list-sector-types` | 查询所有板块类型（共 6 类） | 无 |
+| `list-sectors` | 查板块列表（无过滤约 2.3 千行） | 【可选】`--sector-type`（支持全部 6 类）、`--sector-code`、`--sector-name`、`--keyword` |
 | `list-indicators-by-sector` | 按板块代码查该板块全部指标 | 【必填】`--sector-code` |
-| `get-indicator-value-latest-by-type-and-sector` | 全板块最新一期截面（跨板块比较，免找 ID；主题概念下约 1.5 千行） | 【必填】`--indicator-type`、`--sector-type` |
+| `get-indicator-value-latest-by-type-and-sector` | 全板块最新一期截面（跨板块比较，免找 ID；主题概念下约 1.5 千行） | 【必填】`--indicator-type`、`--sector-type`（支持全部 6 类） |
 
 ### 主题分类
 
@@ -119,7 +119,7 @@ A 股板块级投研数据的查询与分析技能，数据统一来自 aibeta S
 | `plot-bar` | 单指标多板块最新截面柱状图（标的数 >30 时两端各取 15） | 【必填】`--indicator-type`、`--sector-type`；【可选】`--sort`、`--title`、`--output`/`--format` |
 | `plot-scatter` | 双指标截面散点图（同频率校验、按板块对齐且须同一数据日期、MAD 离群点剔除） | 【必填】`--indicator-type`（恰好 2 次：x、y 轴）、`--sector-type`；【可选】`--annotate`、`--skip-frequency-check`、`--title`、`--output`/`--format` |
 
-`plot-bar` / `plot-scatter` 的 `--sector-type` 可选全集 6 个：ETF指数 / 中信证券行业 / 中信证券一级行业 / 中信证券二级行业 / 中信证券三级行业 / 主题概念。
+`--sector-type` 的取值全集共 6 个：ETF指数 / 中信证券行业 / 中信证券一级行业 / 中信证券二级行业 / 中信证券三级行业 / 主题概念（即 `list-sector-types` 的返回全集），适用于 `list-sectors`、`get-indicator-value-latest-by-type-and-sector` 与 `plot-bar` / `plot-scatter`；例外：`list-indicators --sector-type` 按返回记录的 `sector_type` 列精确匹配（板块家族口径，不含中信细分层级）。
 
 ### 自检
 

@@ -2,7 +2,7 @@
 
 本文档是统一 CLI（`ai-beta`）的详细使用手册，覆盖安装与运行环境、通用约定（输出 / 退出码 / 时间窗口 / 日期口径 / CLI-Python 接口对照）、子命令明细与排障。Python SDK 的详细用法见同目录 `PythonSDK_使用手册.md`。
 
-数据统一来自 [aibeta SDK](https://pypi.org/project/aibeta/)（`aibeta==1.1.0`）：网络请求、Token 管理、重试与本地快照缓存全部由 SDK 托管，本 skill 仅提供薄封装的统一 CLI。
+数据统一来自 [aibeta SDK](https://pypi.org/project/aibeta/)（`aibeta==1.3.1`）：网络请求、Token 管理、重试与本地快照缓存全部由 SDK 托管，本 skill 仅提供薄封装的统一 CLI。
 
 ## 1. 概述与运行边界
 
@@ -262,6 +262,7 @@ ai-beta list-indicators \
 
 - 每类约 2 千行，建议先用过滤参数缩小范围
 - `indicator_name` 是系统拼接的长名称（含指标类型、关联板块、统计口径、频率、单位等信息，如 `市盈率PE__['ETF指数']__{...}__当期__周__无单位`），定位目标板块时以解析出的 `sector_name` / `sector_code` 列（或 `--keyword`）为准，实际取数只使用 `indicator_id`
+- `--sector-type` 是 CLI 本地过滤参数（SDK `list_indicators` 无此入参，见第 3.6 节对照表），按返回记录的 `sector_type` 列精确匹配；该列恒为板块家族口径（ETF指数 / 中信证券行业 / 主题概念），传中信一/二/三级行业会得到空结果，需要细分层级截面请改用 `get-indicator-value-latest-by-type-and-sector`
 
 #### 查询单个指标的时序数据
 
@@ -314,6 +315,8 @@ ai-beta list-sector-types
 
 返回字段：`sector_type`（不输出 `update_time`，原因见第 3.6 节）。
 
+共 6 类：ETF指数 / 中信证券行业 / 中信证券一级行业 / 中信证券二级行业 / 中信证券三级行业 / 主题概念；中信家族按"聚合 → 一级 → 二级 → 三级"排序。
+
 #### 查询板块列表
 
 ```bash
@@ -332,6 +335,8 @@ ai-beta list-sectors --sector-name "沪深300指数"
 ```
 
 返回字段：`sector_type`, `sector_code`, `sector_name`（不输出 `update_time`，原因见第 3.6 节）。
+
+`--sector-type` 支持全部 6 类板块类型（含中信证券一/二/三级行业细分，传入细分类型时仅返回对应层级的板块）。
 
 #### 按板块代码查询关联指标列表
 
@@ -354,6 +359,8 @@ ai-beta get-indicator-value-latest-by-type-and-sector \
 适合做跨板块截面比较；如需单指标历史时序，改用 `get-indicator-value`，需要全板块历史值时按第 6 节用 Python 调用 SDK。
 
 注意：本命令返回所有板块的最新一期截面（每板块一行），在"主题概念"板块类型下约 1.5 千行，建议搭配重定向落盘使用。
+
+`--sector-type` 支持全部 6 类板块类型（含中信证券一/二/三级行业细分，传入细分类型时仅返回对应层级的板块）；传"中信证券行业"为聚合口径，等价三级并集。
 
 ### 4.2 主题分类
 
@@ -480,7 +487,7 @@ ai-beta plot-bar --indicator-type "市盈率PE" --sector-type "ETF指数" \
 
 - 截面取**最新一期**，不支持时间窗口参数；各标的最新数据日期不一致时（如月频指标各板块报告期不同）`stderr` 提示，柱高为各自最新值
 - 图题默认为 `指标类型 · 板块类型（截面日期 · 频率 · 单位）`（截面日期取占比最高者）；横轴刻度为标的名称
-- 「中信证券一/二/三级行业」为拆分层级：取数走「中信证券行业」截面后按行业代码位数（一级 2 位、二级 4 位、三级 6 位）过滤，过滤后为空视为该层级无数据（退出码 `1`）
+- 「中信证券一/二/三级行业」为细分层级（一级代码 2 位、二级 4 位、三级 6 位），仅返回对应层级的板块；细分层级无数据时报错退出（退出码 `1`）
 - 标的数 ≤ 30 时全部绘制；超过 30 时按排序方向两端各取 15（Top15 + Bottom15，共 30 根柱），中间以"省略 N 个"跳跃刻度提示并在 `stderr` 说明；`stdout` 摘要 JSON 含 `bars`（绘制柱数）、`sectors_total`（截面标的总数）、`data_dates`（截面涉及的去重观测日期），两端截取时附 `omitted_sectors`（被省略标的数）
 - 类型取值不存在或截面无有效数值 → 退出码 `1`
 
@@ -514,7 +521,7 @@ ai-beta plot-scatter --indicator-type "市盈率PE" --indicator-type "市净率P
 
 - **同频率自动校验（fail closed）**：两指标类型的频率元数据不一致时直接失败（如 周频 × 日频）；频率元数据不可得时同样失败，退出码 `1`。确认两指标频率口径一致后，可加 `--skip-frequency-check` 显式跳过校验
 - **日期对齐（严格同一数据日期）**：两截面按 `sector_code` 内连接，仅保留两侧 `data_date` 相同的板块；被剔除数量在 `stderr` 提示（摘要 JSON 附 `date_mismatch_dropped`），全部无法对齐则失败；对齐后若仍含多个不同数据日期，无法构成同一日横截面，直接失败（退出码 `1`）并逐日期提示板块数，拒绝出图
-- 「中信证券一/二/三级行业」为拆分层级：取数走「中信证券行业」截面后按行业代码位数（2/4/6 位）过滤，再进行日期对齐与离群点剔除
+- 「中信证券一/二/三级行业」为细分层级（一级 2 位、二级 4 位、三级 6 位），截面仅含对应层级的板块，再进行日期对齐与离群点剔除
 - **离群点剔除**：对齐后任一坐标偏离该轴中位数超过 20×1.4826×MAD（即 29.652×MAD 稳健标准差）的板块整点剔除，避免极端值压缩主体散点；剔除数量在 `stderr` 提示并附于摘要 JSON `outliers_dropped`，某轴 MAD 为 0（半数以上取值相同）时跳过该轴剔除
 - x/y 轴标签自动带指标单位；`stdout` 摘要 JSON 含 `points`、`data_date`（截面数据日期，对齐后唯一）、`x_indicator_type`、`y_indicator_type`、`date_mismatch_dropped`（发生日期剔除时）、`outliers_dropped`（发生离群点剔除时）
 

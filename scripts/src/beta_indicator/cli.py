@@ -379,7 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser_list_indicators.add_argument(
         "--sector-type",
         required=False,
-        help='板块类型精确过滤，可选，例如 "ETF指数"。',
+        help='板块类型精确过滤，可选，例如 "中信证券行业"、"中信证券一级行业"、"中信证券二级行业"、"中信证券三级行业"、"ETF指数"、"主题概念"。',
     )
     parser_list_indicators.add_argument(
         "--keyword",
@@ -425,7 +425,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser_list_sectors.add_argument(
         "--sector-type",
         required=False,
-        help='板块类型，可选，例如 "ETF指数"。',
+        help="板块类型，可选全集：ETF指数 / 中信证券行业 / 中信证券一级行业 / "
+        "中信证券二级行业 / 中信证券三级行业 / 主题概念。",
     )
     parser_list_sectors.add_argument(
         "--sector-code",
@@ -464,7 +465,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser_latest_by_type_and_sector.add_argument(
         "--sector-type",
         required=True,
-        help='板块类型名称，例如 "ETF指数"。',
+        help="板块类型名称，可选全集：ETF指数 / 中信证券行业 / 中信证券一级行业 / "
+        "中信证券二级行业 / 中信证券三级行业 / 主题概念。",
     )
 
     # ── 主题分类 ────────────────────────────────────────────────
